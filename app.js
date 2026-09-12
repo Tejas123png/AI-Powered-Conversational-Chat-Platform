@@ -18,14 +18,51 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Support production frontend origin or localhost in dev
-const clientOrigin = process.env.CLIENT_URL || true;
-app.use(
-  cors({
-    origin: clientOrigin === "true" ? true : clientOrigin,
-    credentials: true,
-  })
-);
+// Determine allowed origins dynamically:
+// 1. Specific production origin configured in CLIENT_URL (e.g. https://ai-powered-conversational-chat-plat.vercel.app)
+// 2. Local development environments (e.g. http://localhost:5173, http://localhost:3000)
+// 3. Vercel preview deployments for this project (e.g. https://ai-powered-conversational-chat-*.vercel.app)
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "http://127.0.0.1:5173",
+].filter(Boolean);
+
+// Regex matching preview deployments for this project on vercel.app
+const vercelPreviewPattern = /^https:\/\/ai-powered-conversational-chat-[a-z0-9-]+-tejas123pns-projects\.vercel\.app$/;
+const vercelGeneralProjectPattern = /^https:\/\/ai-powered-conversational-chat(-[a-z0-9-]+)?\.vercel\.app$/;
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // 1. Allow requests without Origin (e.g., mobile apps, curl, server-to-server, health checks)
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    // 2. Check exact matches in whitelist
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    // 3. Check Vercel preview domain patterns for this project
+    if (
+      vercelPreviewPattern.test(origin) ||
+      vercelGeneralProjectPattern.test(origin)
+    ) {
+      return callback(null, true);
+    }
+
+    // 4. Reject other origins
+    console.warn(`[CORS Blocked] Origin not allowed: ${origin}`);
+    callback(new Error(`CORS origin not allowed: ${origin}`));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
+};
+
+app.use(cors(corsOptions));
 
 app.use("/api/auth", authRoutes);
 app.use("/api", chatRoutes);

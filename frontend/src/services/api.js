@@ -1,6 +1,7 @@
 // In dev, Vite proxies /api → http://localhost:8080, so we use relative path.
 // Set VITE_API_BASE_URL for production deployments.
-const BASE = import.meta.env.VITE_API_BASE_URL || "";
+const rawBase = import.meta.env.VITE_API_BASE_URL || "";
+const BASE = rawBase.replace(/\/+$/, "");
 
 async function request(path, options = {}) {
   const res = await fetch(`${BASE}${path}`, {

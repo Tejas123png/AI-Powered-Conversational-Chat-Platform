@@ -5,21 +5,27 @@ import authMiddleware from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
+// Helper to compute cookie options based on environment and cross-origin setup
+const getCookieOptions = (isCrossDomain, isProd) => ({
+  httpOnly: true,
+  secure: isProd,
+  sameSite: isCrossDomain ? "none" : "lax",
+});
+
 // Helper to generate token and set cookie
-const generateTokenAndSetCookie = (res, userId) => {
+const generateTokenAndSetCookie = (req, res, userId) => {
   const token = jwt.sign({ id: userId }, process.env.JWT_SECRET, {
     expiresIn: "7d",
   });
 
   const isProd = process.env.NODE_ENV === "production";
-  // If frontend is deployed on a different domain (e.g., Vercel) from backend (e.g., Render),
-  // cookies require sameSite: "none" and secure: true.
-  const isCrossDomain = isProd && Boolean(process.env.CLIENT_URL);
+  const origin = req.headers.origin || "";
+  // Cross-domain if CLIENT_URL is set, or if Origin header indicates a remote domain
+  const isCrossDomain =
+    isProd && (Boolean(process.env.CLIENT_URL) || origin.includes("vercel.app") || origin.startsWith("https://"));
 
   res.cookie("token", token, {
-    httpOnly: true,
-    secure: isProd,
-    sameSite: isCrossDomain ? "none" : "lax",
+    ...getCookieOptions(isCrossDomain, isProd),
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 };
@@ -40,7 +46,7 @@ router.post("/register", async (req, res) => {
 
     const user = await User.create({ name, email, password });
     
-    generateTokenAndSetCookie(res, user._id);
+    generateTokenAndSetCookie(req, res, user._id);
 
     res.status(201).json({
       _id: user._id,
@@ -65,7 +71,7 @@ router.post("/login", async (req, res) => {
     const user = await User.findOne({ email });
 
     if (user && (await user.comparePassword(password))) {
-      generateTokenAndSetCookie(res, user._id);
+      generateTokenAndSetCookie(req, res, user._id);
       res.json({
         _id: user._id,
         name: user.name,
@@ -82,8 +88,13 @@ router.post("/login", async (req, res) => {
 
 // POST /api/auth/logout
 router.post("/logout", (req, res) => {
+  const isProd = process.env.NODE_ENV === "production";
+  const origin = req.headers.origin || "";
+  const isCrossDomain =
+    isProd && (Boolean(process.env.CLIENT_URL) || origin.includes("vercel.app") || origin.startsWith("https://"));
+
   res.cookie("token", "", {
-    httpOnly: true,
+    ...getCookieOptions(isCrossDomain, isProd),
     expires: new Date(0),
   });
   res.status(200).json({ message: "Logged out successfully" });
