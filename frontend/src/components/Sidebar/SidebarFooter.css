@@ -1,0 +1,23 @@
+.sidebar-user-info {
+  margin-bottom: 0.75rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid #27272a;
+}
+
+.sidebar-user-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-user-email {
+  font-size: 0.8rem;
+  color: #a1a1aa;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 0.1rem;
+}

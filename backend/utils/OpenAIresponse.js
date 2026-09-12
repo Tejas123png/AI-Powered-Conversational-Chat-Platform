@@ -1,40 +1,39 @@
+import { GoogleGenAI } from "@google/genai";
 import "dotenv/config";
 
-const getAIresponse= async (message)=>{
-app.post("/test", async (req, res) => {
-  try {
-    const prompt = req.body.message || "Hello!";
-    const options={
-        method:"POST",
-        headers:[{
-            "x-goog-api-key" : "$GEMINI_API_KEY",
-            "Content-Type":"application/json"
-    }],
-    body:JSON.stringify({
-        "model": "gemini-3.6-flash",
-        "input": "Hello, how are you?"
-    })
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+// Models in priority order - confirmed available on this API key
+const MODELS = [
+  "gemini-3.5-flash",
+  "gemini-3.6-flash",
+  "gemini-2.5-flash",
+  "gemini-flash-latest",
+];
+
+const getAIresponse = async (message) => {
+  let lastErr;
+  for (const model of MODELS) {
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: message,
+      });
+      return response.text;
+    } catch (err) {
+      lastErr = err;
+      // Retry on model-unavailability (404 or deprecated model message)
+      const isModelError =
+        err.status === 404 ||
+        err.message?.toLowerCase().includes("not found") ||
+        err.message?.toLowerCase().includes("no longer available");
+      if (!isModelError) {
+        throw err; // Non-model error - don't retry
+      }
+      console.warn(`Model ${model} unavailable, trying next...`);
     }
-   
-  } catch (error) {
-    console.error("Gemini API error:", error);
-    res.status(500).json({ error: error.message });
   }
-});
+  throw lastErr;
+};
 
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});
-try{
-  const response = await ai.models.generateContent({
-  model: "gemini-3.5-flash-lite",
-  contents: message
-});
-return response.text;
-
-
-}catch(err){
-    console.log(err)
-}
-}
 export default getAIresponse;

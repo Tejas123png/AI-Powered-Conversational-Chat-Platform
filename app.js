@@ -2,14 +2,41 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
-import getAIresponse from "./backend/utils/OpenAIresponse.js";
+import cookieParser from "cookie-parser";
 import chatRoutes from "./backend/routes/chat.js";
+import authRoutes from "./backend/routes/auth.js";
+
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+// Support production frontend origin or localhost in dev
+const clientOrigin = process.env.CLIENT_URL || true;
+app.use(
+  cors({
+    origin: clientOrigin === "true" ? true : clientOrigin,
+    credentials: true,
+  })
+);
+
+app.use("/api/auth", authRoutes);
 app.use("/api", chatRoutes);
 
+// In production, serve the built frontend assets if hosted as a monolith
+if (process.env.NODE_ENV === "production") {
+  const distPath = path.join(__dirname, "frontend", "dist");
+  app.use(express.static(distPath));
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(distPath, "index.html"));
+  });
+}
 
 const PORT = process.env.PORT || 8080;
 
@@ -22,22 +49,6 @@ const connectdb = async () => {
     console.error("MongoDB Connection Error:", err);
   }
 };
-
-// Chat Endpoint
-app.post("/api/chat", async (req, res) => {
-  try {
-    const { message } = req.body;
-    if (!message) {
-      return res.status(400).json({ error: "Message is required" });
-    }
-
-    const reply = await getAIresponse(message);
-    res.json({ reply });
-  } catch (error) {
-    console.error("Chat route error:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
 
 // Start Server
 app.listen(PORT, async () => {
