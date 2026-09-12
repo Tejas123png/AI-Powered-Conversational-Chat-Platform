@@ -55,7 +55,7 @@ const corsOptions = {
 
     // 4. Reject other origins
     console.warn(`[CORS Blocked] Origin not allowed: ${origin}`);
-    callback(new Error(`CORS origin not allowed: ${origin}`));
+    callback(null, false);
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
