@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser";
 import chatRoutes from "./backend/routes/chat.js";
 import authRoutes from "./backend/routes/auth.js";
 
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -29,13 +30,20 @@ app.use(
 app.use("/api/auth", authRoutes);
 app.use("/api", chatRoutes);
 
-// In production, serve the built frontend assets if hosted as a monolith
+// Health check endpoint
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
+// In production, serve frontend only if dist exists (e.g. monolithic deployment)
 if (process.env.NODE_ENV === "production") {
   const distPath = path.join(__dirname, "frontend", "dist");
-  app.use(express.static(distPath));
-  app.get("*", (req, res) => {
-    res.sendFile(path.join(distPath, "index.html"));
-  });
+  if (fs.existsSync(distPath)) {
+    app.use(express.static(distPath));
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
+    });
+  }
 }
 
 const PORT = process.env.PORT || 8080;
