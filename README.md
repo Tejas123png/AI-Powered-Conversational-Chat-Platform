@@ -1,5 +1,7 @@
 # NovaMind - AI Conversational Chat Platform
 
+> 🚀 **Live Demo:** [ai-powered-conversational-chat-plat.vercel.app](https://ai-powered-conversational-chat-plat.vercel.app/)
+
 NovaMind is a full-stack conversational AI application inspired by ChatGPT. It connects a React front end to an Express and MongoDB backend, powered by Google's Gemini models for fast, context-aware responses.
 
 ---
